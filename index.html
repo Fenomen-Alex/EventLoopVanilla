@@ -1,80 +1,110 @@
 <!DOCTYPE html>
 <html class="dark" lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-  <title>JS Event Loop Visualizer</title>
-  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
-  <script>
-    tailwind.config = {
-      darkMode: "class",
-      theme: {
-        extend: {
-          colors: {
-            background: "#0f1418", "on-background": "#dee3e8",
-            primary: "#8ed5ff", "primary-container": "#38bdf8",
-            surface: "#0f1418", "on-surface": "#dee3e8",
-            "surface-container": "#1b2024", "surface-container-high": "#252b2e",
-            "surface-container-highest": "#303539",
-            outline: "#87929a", "outline-variant": "#3e484f",
-          },
-          fontFamily: { body: ["Inter"], mono: ["JetBrains Mono"] },
-        }
-      }
-    }
-  </script>
-  <style>
-    body { font-family: Inter, sans-serif; }
-    .screen-card { transition: transform 0.2s, box-shadow 0.2s; }
-    .screen-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15); }
-  </style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>JS Event Loop Visualizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL@20..48,100..700,0..1" rel="stylesheet"/>
+<script>
+tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-dim":"#0f1418",background:"#0f1418","on-background":"#dee3e8",surface:"#0f1418","on-surface":"#dee3e8","surface-container":"#1b2024","surface-container-low":"#171c20","surface-container-high":"#252b2e","surface-container-highest":"#303539","on-surface-variant":"#bdc8d1","primary":"#8ed5ff","primary-container":"#38bdf8","primary-fixed":"#c4e7ff","primary-fixed-dim":"#7bd0ff","on-primary":"#00354a","on-primary-container":"#004965","secondary":"#ffed76","secondary-container":"#e7d000","secondary-fixed":"#fce425","secondary-fixed-dim":"#dec800","on-secondary":"#373100","tertiary":"#e1bfff","tertiary-container":"#ce9bff","tertiary-fixed":"#f0dbff","tertiary-fixed-dim":"#ddb7ff","on-tertiary":"#490080","error":"#ffb4ab","error-container":"#93000a","on-error":"#690005","outline":"#87929a","outline-variant":"#3e484f"},fontFamily:{body:["Inter","sans-serif"],mono:["JetBrains Mono","monospace"]},fontSize:{"code-block":["14px",{lineHeight:"1.7"}],h2:["32px",{lineHeight:"1.3",fontWeight:"600"}],h1:["48px",{lineHeight:"1.2",letterSpacing:"-0.02em",fontWeight:"700"}],body:["16px",{lineHeight:"1.6"}]}}}};
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Inter,sans-serif;background:#0f1418;color:#dee3e8;min-height:100vh;overflow-x:hidden}
+.glass-panel{background:rgba(27,32,36,0.7);backdrop-filter:blur(12px);border:1px solid rgba(62,72,79,0.3);border-radius:12px}
+.glow-primary{box-shadow:0 0 20px -5px rgba(142,213,255,0.2)}
+.glow-secondary{box-shadow:0 0 20px -5px rgba(255,237,118,0.2)}
+.glow-tertiary{box-shadow:0 0 20px -5px rgba(225,191,255,0.2)}
+.nav-link{display:flex;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;color:#bdc8d1;transition:all .15s;font-size:13px;text-decoration:none;cursor:pointer}
+.nav-link:hover{background:rgba(48,53,57,0.3)}
+.nav-link.active{background:rgba(56,189,248,0.1);color:#8ed5ff;border-left:4px solid #8ed5ff}
+.page{display:none;animation:fadeIn .2s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+@keyframes queuePulse{0%,100%{box-shadow:0 0 4px rgba(142,213,255,0.2)}50%{box-shadow:0 0 16px rgba(142,213,255,0.5)}}
+.frame-enter{animation:slideIn .15s ease}
+.frame-exit{animation:fadeIn .1s ease reverse}
+.stack-frame{transition:all .2s ease}
+.queue-item{animation:slideIn .2s ease}
+.console-line{animation:slideIn .1s ease}
+.material-symbols-outlined{font-variation-settings:'FILL'0,'wght'400,'GRAD'0,'opsz'24;vertical-align:middle}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:#0f1418}
+::-webkit-scrollbar-thumb{background:#3e484f;border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:#87929a}
+.tab-btn{padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;transition:all .15s;border:1px solid transparent;background:transparent;color:#bdc8d1;font-family:Inter,sans-serif}
+.tab-btn:hover{background:rgba(48,53,57,0.3)}
+.tab-btn.active{background:rgba(56,189,248,0.1);color:#8ed5ff;border-color:rgba(142,213,255,0.3)}
+</style>
 </head>
-<body class="bg-[#0f1418] text-[#dee3e8] min-h-screen">
-  <div class="max-w-6xl mx-auto px-6 py-12">
-    <header class="text-center mb-16">
-      <h1 class="text-5xl font-bold mb-4" style="color: #8ed5ff">JS Event Loop Visualizer</h1>
-      <p class="text-lg text-[#87929a] max-w-2xl mx-auto">
-        An interactive deep dive into how JavaScript's event loop, call stack, and task queues work —
-        from Node.js internals to browser environment specifics.
-      </p>
-    </header>
-
-    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <a href="screens/event_loop_hub.html" class="screen-card block p-6 rounded-xl bg-[#1b2024] border border-[#3e484f] no-underline text-inherit">
-        <div class="text-3xl mb-3">🔄</div>
-        <h2 class="text-xl font-semibold mb-2" style="color: #8ed5ff">Event Loop Hub</h2>
-        <p class="text-sm text-[#87929a]">The central dashboard — visualizes the call stack, callback queue, microtask queue, and event loop cycle.</p>
-      </a>
-
-      <a href="screens/execution_playground.html" class="screen-card block p-6 rounded-xl bg-[#1b2024] border border-[#3e484f] no-underline text-inherit">
-        <div class="text-3xl mb-3">⚡</div>
-        <h2 class="text-xl font-semibold mb-2" style="color: #8ed5ff">Execution Playground</h2>
-        <p class="text-sm text-[#87929a]">Run JavaScript snippets step-by-step and watch the call stack, event loop, and queues update in real time.</p>
-      </a>
-
-      <a href="screens/node.js_deep_dive.html" class="screen-card block p-6 rounded-xl bg-[#1b2024] border border-[#3e484f] no-underline text-inherit">
-        <div class="text-3xl mb-3">📦</div>
-        <h2 class="text-xl font-semibold mb-2" style="color: #8ed5ff">Node.js Deep Dive</h2>
-        <p class="text-sm text-[#87929a]">Explore libuv, the thread pool, I/O phases, setImmediate, nextTick, and how Node.js extends the event loop.</p>
-      </a>
-
-      <a href="screens/browser_environment_deep_dive.html" class="screen-card block p-6 rounded-xl bg-[#1b2024] border border-[#3e484f] no-underline text-inherit">
-        <div class="text-3xl mb-3">🌐</div>
-        <h2 class="text-xl font-semibold mb-2" style="color: #8ed5ff">Browser Environment</h2>
-        <p class="text-sm text-[#87929a]">Learn how the event loop works in the browser: rendering pipeline, requestAnimationFrame, Web APIs, and DOM events.</p>
-      </a>
-
-      <a href="screens/hoisting_and_memory_reference.html" class="screen-card block p-6 rounded-xl bg-[#1b2024] border border-[#3e484f] no-underline text-inherit">
-        <div class="text-3xl mb-3">🧠</div>
-        <h2 class="text-xl font-semibold mb-2" style="color: #8ed5ff">Hoisting & Memory Reference</h2>
-        <p class="text-sm text-[#87929a]">Reference material on hoisting, closure memory, scope chains, and how the V8 engine manages memory during execution.</p>
-      </a>
+<body>
+<div class="flex min-h-screen">
+  <aside id="sidebar" class="hidden md:flex flex-col fixed left-0 top-0 h-full w-64 z-40 bg-[rgba(27,32,36,0.7)] backdrop-blur-xl border-r border-[rgba(62,72,79,0.3)] p-4 gap-1" style="padding-top:20px">
+    <div class="mb-6 px-2">
+      <h1 class="text-[22px] font-bold text-[#8ed5ff] tracking-tight">LoopEngine</h1>
+      <p class="text-[11px] text-[#bdc8d1] mt-1 tracking-wider uppercase">Event Loop Visualizer</p>
     </div>
+    <div id="nav-hub" class="nav-link active" data-page="hub"><span class="material-symbols-outlined text-[20px]">dashboard</span> Hub</div>
+    <div id="nav-playground" class="nav-link" data-page="playground"><span class="material-symbols-outlined text-[20px]">play_circle</span> Playground</div>
+    <div id="nav-nodejs" class="nav-link" data-page="nodejs"><span class="material-symbols-outlined text-[20px]">terminal</span> Node.js</div>
+    <div id="nav-browser" class="nav-link" data-page="browser"><span class="material-symbols-outlined text-[20px]">language</span> Browser</div>
+    <div id="nav-memory" class="nav-link" data-page="memory"><span class="material-symbols-outlined text-[20px]">memory</span> Memory</div>
+    <div class="mt-auto pt-4 border-t border-[rgba(62,72,79,0.2)]">
+      <div class="nav-link" style="cursor:default;opacity:0.6"><span class="material-symbols-outlined text-[18px]">description</span> Docs</div>
+      <div class="nav-link" style="cursor:default;opacity:0.6"><span class="material-symbols-outlined text-[18px]">settings</span> Settings</div>
+    </div>
+  </aside>
 
-    <footer class="mt-16 text-center text-sm text-[#3e484f]">
-      Built with Google Stitch &middot; LoopEngine
-    </footer>
-  </div>
+  <main id="main-content" class="flex-1 md:ml-64 min-h-screen pt-4 pb-12 px-4 md:px-8">
+    <div id="page-hub" class="page active"></div>
+    <div id="page-playground" class="page"></div>
+    <div id="page-nodejs" class="page"></div>
+    <div id="page-browser" class="page"></div>
+    <div id="page-memory" class="page"></div>
+  </main>
+</div>
+
+<script>
+// ---- SPA Router ----
+const pages = ['hub','playground','nodejs','browser','memory'];
+const navMap = {};
+
+function showPage(id) {
+  pages.forEach(p => {
+    const el = document.getElementById('page-'+p);
+    const nav = document.getElementById('nav-'+p);
+    if (el) el.classList.toggle('active', p === id);
+    if (nav) nav.classList.toggle('active', p === id);
+  });
+  window.location.hash = id;
+  if (window['render_'+id]) window['render_'+id]();
+}
+
+window.addEventListener('hashchange', () => {
+  const id = window.location.hash.slice(1) || 'hub';
+  if (pages.includes(id)) showPage(id);
+});
+
+pages.forEach(p => {
+  const nav = document.getElementById('nav-'+p);
+  if (nav) { nav.addEventListener('click', () => showPage(p)); navMap[p] = nav; }
+});
+
+</script>
+<script src="js/hub.js"></script>
+<script src="js/nodejs.js"></script>
+<script src="js/browser.js"></script>
+<script src="js/memory.js"></script>
+<script src="js/playground.js"></script>
+<script>
+const initial = window.location.hash.slice(1) || 'hub';
+if (pages.includes(initial)) showPage(initial);
+else showPage('hub');
+</script>
 </body>
 </html>

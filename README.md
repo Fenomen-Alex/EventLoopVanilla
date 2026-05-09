@@ -1,15 +1,15 @@
 # JS Event Loop Visualizer
 
-An interactive educational app illustrating how JavaScript's event loop works — built with Google Stitch.
+Interactive educational SPA illustrating how JavaScript's event loop works. Built with vanilla JS. Deployable on GitHub Pages.
 
-## Screens
+## Pages
 
-| Screen | Description |
-|--------|-------------|
-| **Event Loop Hub** | Central dashboard visualizing the call stack, callback queue, microtask queue, and event loop cycle |
-| **Execution Playground** | Run JS snippets step-by-step and watch execution state update in real time |
-| **Node.js Deep Dive** | libuv, thread pool, I/O phases, setImmediate, nextTick |
-| **Browser Environment** | Rendering pipeline, requestAnimationFrame, Web APIs, DOM events |
-| **Hoisting & Memory Reference** | Hoisting, closures, scope chains, V8 memory management |
+| Page | Route | Description |
+|------|-------|-------------|
+| **Hub** | `#hub` | Step-by-step event loop visualization with animated call stack, microtask/macrotask queues, and console output |
+| **Playground** | `#playground` | Code editor with 6 presets + custom code. Step through execution and watch the event loop in action |
+| **Node.js** | `#nodejs` | libuv phase diagram with auto-cycling indicator and microtask checkpoints |
+| **Browser** | `#browser` | Rendering pipeline breakdown and Web API reference |
+| **Memory** | `#memory` | Hoisting table, TDZ visualization, closure memory, scope chain |
 
-Open `index.html` in a browser to start.
+Open `index.html` in a browser to start. No build step required.
