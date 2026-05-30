@@ -152,14 +152,14 @@ class EventLoopSimulator {
 
     // All scheduled microtasks execute before macrotasks
     if (promiseOps.length > 0) {
-      promiseOps.forEach(op => this.plan.push({ type: 'execute-micro', value: op.value, line: op.line, desc: `Execute microtask → log "${op.value}"` }));
+      promiseOps.forEach(op => this.plan.push({ type: 'execute-micro', value: op.value, line: -1, desc: `Execute microtask → log "${op.value}"` }));
     }
 
     // Then macrotasks
     this.plan.push({ type: 'stack-empty', value: '', line: -1, desc: 'Microtasks drained — process one macrotask' });
 
     if (timerOps.length > 0) {
-      timerOps.forEach(op => this.plan.push({ type: 'execute-macro', value: op.value, line: op.line, desc: `Execute macrotask → log "${op.value}"` }));
+      timerOps.forEach(op => this.plan.push({ type: 'execute-macro', value: op.value, line: -1, desc: `Execute macrotask → log "${op.value}"` }));
     }
 
     this.plan.push({ type: 'done', value: '', line: -1, desc: 'Execution complete' });
@@ -250,6 +250,7 @@ const pgSim = new EventLoopSimulator();
 let pgStep = 0;
 let pgExampleId = 'basic';
 let pgTimer = null;
+let pgLastCode = '';
 
 const PG_HTML = `
 <div class="max-w-[1400px] mx-auto">
@@ -355,7 +356,11 @@ const PG_HTML = `
 `;
 
 function pgUpdate() {
-  pgSim._realPlan(document.getElementById('pg-editor').value.split('\n'));
+  const code = document.getElementById('pg-editor').value;
+  if (code !== pgLastCode) {
+    pgSim._realPlan(code.split('\n'));
+    pgLastCode = code;
+  }
   const state = pgSim.getState(pgStep);
   if (!state) return;
 
@@ -380,14 +385,29 @@ function pgUpdate() {
     : state.output.map(l => `<div class="console-line flex items-start gap-2"><span class="text-[#3e484f] text-[10px] mt-0.5">❯</span><span>${l}</span></div>`).join('');
   conEl.scrollTop = conEl.scrollHeight;
 
-  // Line highlight
+  // Line highlight: find source line matching the last console output
   const marker = document.getElementById('pg-line-marker');
-  if (state.highlight >= 0) {
-    const lineHeight = 20.8;
-    const top = state.highlight * lineHeight + 16;
+  const lines = document.getElementById('pg-editor').value.split('\n');
+  let hl = -1;
+  if (state.output.length > 0) {
+    const lastVal = state.output[state.output.length - 1];
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].replace(/['"`]/g, "'");
+      if (t.includes("console.log('" + lastVal + "')") || t.includes("console.log(\"" + lastVal + "\")")) {
+        hl = i;
+        break;
+      }
+    }
+  }
+  if (hl < 0) hl = state.highlight;
+  if (hl >= 0) {
+    const editor = document.getElementById('pg-editor');
+    const lineHeight = parseFloat(getComputedStyle(editor).lineHeight);
+    const paddingTop = parseFloat(getComputedStyle(editor).paddingTop);
+    const top = hl * lineHeight + paddingTop;
     marker.style.top = top + 'px';
     marker.style.opacity = '1';
-    marker.style.height = '20px';
+    marker.style.height = lineHeight + 'px';
   } else {
     marker.style.opacity = '0';
   }
