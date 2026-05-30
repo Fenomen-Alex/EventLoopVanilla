@@ -188,7 +188,7 @@ const HUB_HTML = `
 </div>
 `;
 
-function hubRenderQueue(containerId, items, color, label) {
+function hubRenderQueue(containerId, items, color) {
   const el = document.getElementById(containerId);
   if (!el) return;
   el.innerHTML = items.length === 0
@@ -225,8 +225,8 @@ function hubUpdate(ex) {
   const data = HUB_EXAMPLES[ex || hubExampleId];
   const step = data.steps[hubStep] || data.steps[0];
   hubRenderStack(step.stack);
-  hubRenderQueue('hub-micro', step.micro, '#e1bfff', 'Micro');
-  hubRenderQueue('hub-macro', step.macro, '#7bd0ff', 'Macro');
+  hubRenderQueue('hub-micro', step.micro, '#e1bfff');
+  hubRenderQueue('hub-macro', step.macro, '#7bd0ff');
   hubRenderConsole(step.output);
 
   const dot = document.getElementById('hub-status-dot');

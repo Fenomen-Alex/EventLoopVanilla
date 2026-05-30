@@ -75,104 +75,7 @@ class EventLoopSimulator {
   }
 
   reset() {
-    this.logs = [];
-    this.stack = ['<global>'];
-    this.microtasks = [];
-    this.macrotasks = [];
-    this.timers = {};
-    this.timerId = 0;
-    this.stepIndex = 0;
     this.plan = [];
-    this.done = false;
-    this.resolveFn = null;
-    this.decisions = [];
-    this.waiting = false;
-  }
-
-  buildPlan() {
-    this.plan = [];
-    this.reset();
-
-    const src = document.getElementById('pg-editor').value;
-    const lines = src.split('\n');
-
-    // Quick scan: detect calls to plan the execution
-    let timerCalls = 0;
-    let promiseCalls = 0;
-    let queueCalls = 0;
-    let awaitCount = 0;
-    let syncLines = [];
-
-    const knownAPIs = {
-      'setTimeout': { type: 'timer' },
-      'Promise.resolve().then': { type: 'promise' },
-      'Promise.resolve()': { type: 'promise' },
-      'queueMicrotask': { type: 'queue' },
-      '.then(': { type: 'promise' },
-    };
-
-    lines.forEach((line, i) => {
-      const t = line.trim();
-      if (!t || t.startsWith('//') || t.startsWith('*') || t.startsWith('/*')) return;
-
-      // Detect async/await patterns
-      if (t.startsWith('async ') || t.startsWith('await ')) {
-        awaitCount++;
-      }
-
-      if (t.includes('setTimeout(') || t.includes('setTimeout (')) {
-        const match = t.match(/setTimeout\s*\(/);
-        if (match) timerCalls++;
-      }
-      if (t.includes('Promise.resolve()')) promiseCalls++;
-      if (t.includes('queueMicrotask(')) queueCalls++;
-      if (t.includes('await ')) awaitCount++;
-    });
-
-    // Build execution plan based on real JS event loop rules
-    // Phase 1: Synchronous execution
-    let syncCode = [];
-    let tempTimers = 0;
-    let tempPromises = 0;
-
-    for (let i = 0; i < lines.length; i++) {
-      const t = lines[i].trim();
-      if (t.includes('console.log')) {
-        const match = t.match(/console\.log\(['"](.+?)['"]\)/);
-        const val = match ? match[1] : '...';
-        this.plan.push({ type: 'log', value: val, line: i, desc: `console.log("${val}")` });
-      }
-      if (t.includes('setTimeout(') || t.includes('setTimeout (')) {
-        const match = t.match(/console\.log\(['"](.+?)['"]\)/);
-        const val = match ? match[1] : 'callback';
-        this.plan.push({ type: 'schedule-macro', value: val, line: i, desc: `setTimeout schedules "${val}"` });
-      }
-      if (t.includes('Promise.resolve()')) {
-        if (t.includes('.then')) {
-          const match = t.match(/console\.log\(['"](.+?)['"]\)/);
-          const val = match ? match[1] : 'promise cb';
-          this.plan.push({ type: 'schedule-micro', value: val, line: i, desc: `Promise.then schedules "${val}"` });
-        }
-      }
-      if (t.includes('queueMicrotask(')) {
-        const match = t.match(/console\.log\(['"](.+?)['"]\)/);
-        const val = match ? match[1] : 'microtask';
-        this.plan.push({ type: 'schedule-micro', value: val, line: i, desc: `queueMicrotask schedules "${val}"` });
-      }
-      if (t.includes('await ')) {
-        this.plan.push({ type: 'await', value: 'after await', line: i, desc: `await pauses — rest becomes microtask` });
-      }
-    }
-
-    // Insert microtask drain after sync phase
-    const hasMicro = this.plan.some(p => p.type === 'schedule-micro');
-    const hasMacro = this.plan.some(p => p.type === 'schedule-macro');
-
-    // Re-plan more carefully with proper event loop ordering
-    this.plan = [];
-    this._realPlan(lines);
-
-    return this.plan;
   }
 
   _realPlan(lines) {
@@ -190,8 +93,8 @@ class EventLoopSimulator {
       if (!t || t.startsWith('//')) return;
 
       // ---- Track multi-line callback bodies ----
-      const openCnt = (t.match(/\{/g) || []).length;
-      const closeCnt = (t.match(/\}/g) || []).length;
+      const openCnt = (t.match(/{/g) || []).length;
+      const closeCnt = (t.match(/}/g) || []).length;
       const isSchedulingLine = t.includes('setTimeout(') || t.includes('setTimeout (') ||
                                t.includes('.then(') || t.includes('.then (') ||
                                t.includes('queueMicrotask(');
@@ -212,8 +115,6 @@ class EventLoopSimulator {
         syncOps.push({ type: 'log', value: match ? match[1] : '...', line: i, desc: `Log "${match ? match[1] : '...'}"` });
       }
       if (t.includes('setTimeout(') || t.includes('setTimeout (')) {
-        const match = t.match(/(?:=>|function\s*\()\s*\n?\s*([\s\S]*?)\s*\n?\s*\}\)/, '');
-        let desc = t.replace(/setTimeout\s*\(/, '').replace(/\)\s*;?$/, '').trim();
         const val = t.includes('console.log') ? (t.match(/['"](.+?)['"]/) || ['','cb'])[1] : 'cb';
         timerOps.push({ type: 'schedule-macro', value: val, line: i, desc: `setTimeout → macrotask ("${val}")` });
       }
@@ -235,9 +136,6 @@ class EventLoopSimulator {
       }
       if (t.includes('async function')) {
         syncOps.push({ type: 'enter-async', value: 'async fn', line: i, desc: `Async function created` });
-      }
-      if (t.includes('};') || t.includes('});') || t.includes('})')) {
-        // closing braces
       }
     });
 
@@ -264,12 +162,7 @@ class EventLoopSimulator {
       timerOps.forEach(op => this.plan.push({ type: 'execute-macro', value: op.value, line: op.line, desc: `Execute macrotask → log "${op.value}"` }));
     }
 
-    if (timerOps.length === 0 && promiseOps.length === 0 && syncOps.length > 0) {
-      // Pure sync
-      this.plan.push({ type: 'done', value: '', line: -1, desc: 'Execution complete' });
-    } else {
-      this.plan.push({ type: 'done', value: '', line: -1, desc: 'Execution complete' });
-    }
+    this.plan.push({ type: 'done', value: '', line: -1, desc: 'Execution complete' });
 
     // Handle async/await specially
     if (hasAsync) {
@@ -357,7 +250,6 @@ const pgSim = new EventLoopSimulator();
 let pgStep = 0;
 let pgExampleId = 'basic';
 let pgTimer = null;
-let pgEditor = null;
 
 const PG_HTML = `
 <div class="max-w-[1400px] mx-auto">
@@ -490,7 +382,6 @@ function pgUpdate() {
 
   // Line highlight
   const marker = document.getElementById('pg-line-marker');
-  const editor = document.getElementById('pg-editor');
   if (state.highlight >= 0) {
     const lineHeight = 20.8;
     const top = state.highlight * lineHeight + 16;

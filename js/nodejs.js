@@ -204,6 +204,9 @@ function render_nodejs() {
 </div>`;
   container.dataset.loaded = '1';
 
+  // Clear previous interval if any
+  if (window._nodejsInterval) clearInterval(window._nodejsInterval);
+
   // Animate the phase names cycling
   const phases = ['Timers', 'Pending Callbacks', 'Idle / Prepare', 'Poll', 'Check', 'Close Callbacks'];
   let phaseIdx = 3;
@@ -211,7 +214,7 @@ function render_nodejs() {
   const spinner = document.getElementById('nodejs-spinner');
   if (spinner) spinner.style.animation = 'spin 3s linear infinite';
 
-  setInterval(() => {
+  window._nodejsInterval = setInterval(() => {
     phaseIdx = (phaseIdx + 1) % phases.length;
     if (phaseEl) phaseEl.textContent = phases[phaseIdx];
 

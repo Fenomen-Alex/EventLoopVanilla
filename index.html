@@ -14,7 +14,6 @@ tailwind.config={darkMode:"class",theme:{extend:{colors:{"surface-dim":"#0f1418"
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Inter,sans-serif;background:#0f1418;color:#dee3e8;min-height:100vh;overflow-x:hidden}
 .glass-panel{background:rgba(27,32,36,0.7);backdrop-filter:blur(12px);border:1px solid rgba(62,72,79,0.3);border-radius:12px}
-.glow-primary{box-shadow:0 0 20px -5px rgba(142,213,255,0.2)}
 .glow-secondary{box-shadow:0 0 20px -5px rgba(255,237,118,0.2)}
 .glow-tertiary{box-shadow:0 0 20px -5px rgba(225,191,255,0.2)}
 .nav-link{display:flex;align-items:center;gap:12px;padding:8px 16px;border-radius:8px;color:#bdc8d1;transition:all .15s;font-size:13px;text-decoration:none;cursor:pointer}
@@ -27,8 +26,6 @@ body{font-family:Inter,sans-serif;background:#0f1418;color:#dee3e8;min-height:10
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes slideIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
 @keyframes queuePulse{0%,100%{box-shadow:0 0 4px rgba(142,213,255,0.2)}50%{box-shadow:0 0 16px rgba(142,213,255,0.5)}}
-.frame-enter{animation:slideIn .15s ease}
-.frame-exit{animation:fadeIn .1s ease reverse}
 .stack-frame{transition:all .2s ease}
 .queue-item{animation:slideIn .2s ease}
 .console-line{animation:slideIn .1s ease}
@@ -72,7 +69,6 @@ body{font-family:Inter,sans-serif;background:#0f1418;color:#dee3e8;min-height:10
 <script>
 // ---- SPA Router ----
 const pages = ['hub','playground','nodejs','browser','memory'];
-const navMap = {};
 
 function showPage(id) {
   pages.forEach(p => {
@@ -92,7 +88,7 @@ window.addEventListener('hashchange', () => {
 
 pages.forEach(p => {
   const nav = document.getElementById('nav-'+p);
-  if (nav) { nav.addEventListener('click', () => showPage(p)); navMap[p] = nav; }
+  if (nav) { nav.addEventListener('click', () => showPage(p)); }
 });
 
 </script>
