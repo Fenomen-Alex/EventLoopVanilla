@@ -176,17 +176,38 @@ class EventLoopSimulator {
   }
 
   _realPlan(lines) {
+    this.plan = [];
     // Step 1: Collect all events in order
     const syncOps = [];
     const timerOps = [];
     const promiseOps = [];
     let hasAsync = false;
+    let inCallbackBody = false;
+    let callbackBraceDepth = 0;
 
     lines.forEach((line, i) => {
       const t = line.trim();
       if (!t || t.startsWith('//')) return;
 
-      if (t.includes('console.log')) {
+      // ---- Track multi-line callback bodies ----
+      const openCnt = (t.match(/\{/g) || []).length;
+      const closeCnt = (t.match(/\}/g) || []).length;
+      const isSchedulingLine = t.includes('setTimeout(') || t.includes('setTimeout (') ||
+                               t.includes('.then(') || t.includes('.then (') ||
+                               t.includes('queueMicrotask(');
+
+      if (!inCallbackBody && isSchedulingLine && openCnt > 0) {
+        inCallbackBody = true;
+        callbackBraceDepth = openCnt - closeCnt;
+      } else if (inCallbackBody) {
+        callbackBraceDepth += openCnt - closeCnt;
+        if (callbackBraceDepth <= 0) {
+          inCallbackBody = false;
+          callbackBraceDepth = 0;
+        }
+      }
+
+      if (t.includes('console.log') && !inCallbackBody && !t.includes('setTimeout') && !t.includes('Promise.resolve()') && !t.includes('queueMicrotask(') && !t.includes('.then(')) {
         const match = t.match(/console\.log\(['"](.+?)['"]\)/);
         syncOps.push({ type: 'log', value: match ? match[1] : '...', line: i, desc: `Log "${match ? match[1] : '...'}"` });
       }
